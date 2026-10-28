@@ -1,0 +1,36 @@
+# =====================================================================
+# 03b_rman_verificacion.rman  (fase VERIFICAR / HACER)
+# Control: A8.13   |  Riesgo: R-CONF-03   |  Pruebas: P-10, P-11
+# Ejecutar:  rman target / @03b_rman_verificacion.rman
+# (en XE sobre Windows: rman target sys@localhost:1521/XE)
+# Los bloques marcados HACER cambian la configuracion; el resto solo lee.
+# =====================================================================
+
+# --- [P-10] Configuracion actual ---------------------------------------
+# Esperado: CONFIGURE ENCRYPTION FOR DATABASE ON
+SHOW ALL;
+SHOW ENCRYPTION FOR DATABASE;
+SHOW RETENTION POLICY;
+
+# --- HACER: activar cifrado de respaldos --------------------------------
+# Modo transparente (usa el wallet TDE abierto):
+CONFIGURE ENCRYPTION FOR DATABASE ON;
+# Alternativa por contrasena (si no dispone de wallet); guarde la clave aparte:
+# SET ENCRYPTION ON IDENTIFIED BY "ClaveRespaldo#2026" ONLY;
+
+# --- Generar un respaldo de prueba --------------------------------------
+BACKUP DATABASE PLUS ARCHIVELOG;
+# Si la base esta en NOARCHIVELOG (por defecto en XE) use:
+# BACKUP DATABASE;
+
+# --- [P-10] Inventario de respaldos -------------------------------------
+LIST BACKUP SUMMARY;
+
+# --- [P-11] Validacion de restauracion (no sobrescribe archivos) --------
+# Esperado: sin errores y mensaje de validacion correcta.
+RESTORE DATABASE VALIDATE;
+VALIDATE BACKUPSET;
+
+# --- [P-11] Prueba negativa recomendada (documentar en el informe) -------
+# En un host de pruebas SIN el wallet, intente restaurar un respaldo cifrado.
+# Resultado esperado: la restauracion falla y no se leen datos del respaldo.
